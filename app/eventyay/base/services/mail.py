@@ -294,7 +294,7 @@ def mail(
                         DeprecationWarning,
                     )
                     body_html = renderer.render(content_plain, signature, raw_subject, order)
-            except:
+            except Exception:
                 logger.exception('Could not render HTML body')
                 log_event('mail', 'mail.template.render', OUTCOME_FAILURE, error_code='html_render', event_id=event.id if event else None, order_id=order.pk if order else None)
                 body_html = None
@@ -470,7 +470,7 @@ def mail_send_task(
                                 for a in args:
                                     try:
                                         email.attach(*a)
-                                    except:
+                                    except Exception:
                                         pass
                             else:
                                 message = (
@@ -518,7 +518,7 @@ def mail_send_task(
                                 inv.file.file.read(),
                                 'application/pdf',
                             )
-                    except:
+                    except Exception:
                         logger.exception('Could not attach invoice to email')
                         pass
 
@@ -531,7 +531,7 @@ def mail_send_task(
                             cf.file.file.read(),
                             cf.type,
                         )
-                    except:
+                    except Exception:
                         logger.exception('Could not attach file to email')
                         pass
 
