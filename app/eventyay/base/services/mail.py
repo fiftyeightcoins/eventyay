@@ -296,11 +296,7 @@ def mail(
                     )
                     body_html = renderer.render(content_plain, signature, raw_subject, order)
             except (TemplateDoesNotExist, TypeError, ValueError):
-                # TemplateDoesNotExist: get_template() inside TemplateBasedMailRenderer.render()
-                #   cannot resolve the configured template — fall back to plain-text email
-                #   so the send_task is still constructed and the mail still queues.
-                # TypeError: inspect.signature raises this when the renderer is not callable.
-                # ValueError: renderer.render() implementations may raise this on bad inputs.
+                # Fall back to plain-text email if the HTML body can't be rendered.
                 logger.exception('Could not render HTML body')
                 log_event('mail', 'mail.template.render', OUTCOME_FAILURE, error_code='html_render', event_id=event.id if event else None, order_id=order.pk if order else None)
                 body_html = None
@@ -477,9 +473,6 @@ def mail_send_task(
                                     try:
                                         email.attach(*a)
                                     except (ValueError, TypeError):
-                                        # email.attach() raises ValueError for empty/invalid
-                                        # content and TypeError for wrong argument types;
-                                        # skip the defective attachment and continue.
                                         pass
                             else:
                                 message = (
@@ -528,9 +521,6 @@ def mail_send_task(
                                 'application/pdf',
                             )
                     except (OSError, ValueError, TypeError):
-                        # OSError covers file I/O failures on inv.file.file.read();
-                        # ValueError/TypeError cover invalid content passed to attach().
-                        # Skip the attachment rather than failing the whole send.
                         logger.exception('Could not attach invoice to email')
                         pass
 
@@ -544,9 +534,6 @@ def mail_send_task(
                             cf.type,
                         )
                     except (OSError, ValueError, TypeError):
-                        # OSError covers file I/O failures on inv.file.file.read();
-                        # ValueError/TypeError cover invalid content passed to attach().
-                        # Skip the attachment rather than failing the whole send.
                         logger.exception('Could not attach file to email')
                         pass
 
