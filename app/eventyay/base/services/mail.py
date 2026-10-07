@@ -26,6 +26,7 @@ from django.core.mail import (
 )
 from django.core.mail.message import SafeMIMEText
 from django.db import transaction
+from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.utils.timezone import override
 from django.utils.translation import gettext as _
@@ -294,10 +295,12 @@ def mail(
                         DeprecationWarning,
                     )
                     body_html = renderer.render(content_plain, signature, raw_subject, order)
-            except (TypeError, ValueError):
-                # inspect.signature raises TypeError when the renderer is not a callable;
-                # renderer.render implementations may raise TypeError or ValueError on
-                # bad inputs.  Fall back to plain-text-only email rather than failing.
+            except (TemplateDoesNotExist, TypeError, ValueError):
+                # TemplateDoesNotExist: get_template() inside TemplateBasedMailRenderer.render()
+                #   cannot resolve the configured template — fall back to plain-text email
+                #   so the send_task is still constructed and the mail still queues.
+                # TypeError: inspect.signature raises this when the renderer is not callable.
+                # ValueError: renderer.render() implementations may raise this on bad inputs.
                 logger.exception('Could not render HTML body')
                 log_event('mail', 'mail.template.render', OUTCOME_FAILURE, error_code='html_render', event_id=event.id if event else None, order_id=order.pk if order else None)
                 body_html = None
