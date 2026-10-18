@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+from django.conf import settings
 from django.utils.timezone import now
 from django_scopes import scopes_disabled
 
@@ -401,3 +402,54 @@ def test_add_subevents_for_days_populates_timezones(monkeypatch):
 
     assert timezones == {'America/New_York', 'Europe/Berlin'}
 
+
+@pytest.mark.parametrize('empty', [None, ''])
+def test_add_events_for_days_falls_back_when_timezone_missing(empty):
+    event = MagicMock()
+    event.settings.timezone = empty
+    event.settings.show_date_to = False
+    event.date_from = datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
+    event.date_to = None
+
+    baseqs = MagicMock()
+    mock_qs = MagicMock()
+    mock_qs.__iter__.return_value = [event]
+    baseqs.filter.return_value.filter.return_value.order_by.return_value.prefetch_related.return_value = mock_qs
+
+    request = MagicMock(spec=[])
+    ebd = defaultdict(list)
+    timezones = set()
+    before = datetime(2026, 9, 1, 0, 0, tzinfo=UTC)
+    after = datetime(2026, 9, 30, 23, 59, tzinfo=UTC)
+
+    add_events_for_days(request, baseqs, before, after, ebd, timezones)
+
+    assert timezones == {settings.TIME_ZONE}
+
+
+@pytest.mark.parametrize('empty', [None, ''])
+def test_add_subevents_for_days_falls_back_when_timezone_missing(monkeypatch, empty):
+    monkeypatch.setattr('eventyay.presale.views.organizer.eventreverse', lambda *args, **kwargs: 'http://testserver')
+
+    se = MagicMock()
+    se.event.settings.timezone = empty
+    se.event.settings.show_date_to = False
+    se.event.settings.event_list_available_only = False
+    se.presale_is_running = False
+    se.date_from = datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
+    se.date_to = None
+    se.name = 'SE 1'
+
+    baseqs = MagicMock()
+    mock_sqs = MagicMock()
+    mock_sqs.__iter__.side_effect = lambda: iter([se])
+    baseqs.filter.return_value.filter.return_value.order_by.return_value = mock_sqs
+
+    ebd = defaultdict(list)
+    timezones = set()
+    before = datetime(2026, 9, 1, 0, 0, tzinfo=UTC)
+    after = datetime(2026, 9, 30, 23, 59, tzinfo=UTC)
+
+    add_subevents_for_days(baseqs, before, after, ebd, timezones)
+
+    assert timezones == {settings.TIME_ZONE}

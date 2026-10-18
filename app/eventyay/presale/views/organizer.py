@@ -351,9 +351,9 @@ def add_events_for_days(request, baseqs, before, after, ebd, timezones):
     if hasattr(request, 'organizer'):
         qs = filter_qs_by_attr(qs, request)
     for event in qs:
-        if event.settings.timezone:
-            timezones.add(event.settings.timezone)
-        tz = ZoneInfo(event.settings.timezone)
+        tz_name = event.settings.timezone or settings.TIME_ZONE
+        timezones.add(tz_name)
+        tz = ZoneInfo(tz_name)
         datetime_from = event.date_from.astimezone(tz)
         date_from = datetime_from.date()
         if event.settings.show_date_to and event.date_to:
@@ -441,9 +441,9 @@ def add_subevents_for_days(qs, before, after, ebd, timezones, event=None, cart_n
             if hide:
                 continue
 
-        if s.timezone:
-            timezones.add(s.timezone)
-        tz = ZoneInfo(s.timezone)
+        tz_name = s.timezone or settings.TIME_ZONE
+        timezones.add(tz_name)
+        tz = ZoneInfo(tz_name)
         datetime_from = se.date_from.astimezone(tz)
         date_from = datetime_from.date()
         if name is None:
