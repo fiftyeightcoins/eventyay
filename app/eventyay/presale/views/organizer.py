@@ -172,7 +172,8 @@ class EventListMixin:
             datetime_from = next_ev.date_from
 
         if datetime_from:
-            tz = ZoneInfo(next_ev.settings.timezone)
+            tz_name = next_ev.settings.timezone or settings.TIME_ZONE
+            tz = ZoneInfo(tz_name)
             self.year = datetime_from.astimezone(tz).year
             self.month = datetime_from.astimezone(tz).month
         else:
