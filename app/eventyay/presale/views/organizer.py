@@ -281,7 +281,7 @@ class EventListMixin:
             datetime_from = next_ev.date_from
 
         if datetime_from:
-            tz = ZoneInfo(next_ev.settings.timezone)
+            tz = ZoneInfo(next_ev.settings.timezone or settings.TIME_ZONE)
             self.year = datetime_from.astimezone(tz).isocalendar()[0]
             self.week = datetime_from.astimezone(tz).isocalendar()[1]
         else:
@@ -329,7 +329,10 @@ class OrganizerIndex(OrganizerViewMixin, EventListMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         for event in ctx['events']:
-            event.tzname = ZoneInfo(event.cache.get_or_set('timezone', lambda e=event: e.settings.timezone))
+            tz_name = event.cache.get_or_set(
+                'timezone', lambda e=event: e.settings.timezone or settings.TIME_ZONE
+            ) or settings.TIME_ZONE
+            event.tzname = ZoneInfo(tz_name)
             if event.has_subevents:
                 event.daterange = daterange(
                     event.min_from.astimezone(event.tzname),
